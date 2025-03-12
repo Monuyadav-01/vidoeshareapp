@@ -1,6 +1,8 @@
 import { v2 as cloudinary } from "cloudinary";
 import fs from "fs";
 import dotenv from "dotenv";
+import { Apierror } from "./ApiError.js";
+import { asyncHandler } from "./asyncHandler.js";
 dotenv.config();
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -31,4 +33,18 @@ const uploadFileOnCloudinary = async (localFilePath) => {
     return null;
   }
 };
+
+const deleteOldCloudinaryImage = asyncHandler(async (publicId) => {
+  try {
+    if (!publicId) {
+      throw new Apierror(400, "Error finding public id");
+    }
+    const response = cloudinary.uploader.destroy(publicId);
+    console.log("old image deleted", response);
+    return response;
+  } catch (error) {
+    console.log("Error", error.message);
+    return null;
+  }
+});
 export { uploadFileOnCloudinary };
