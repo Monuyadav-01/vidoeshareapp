@@ -30,7 +30,9 @@ router.route("/login").post(loginUser);
 router.route("/logout").post(verifyJWT, logoutUser);
 router.route("/refresh-token").post(refreshAccessToken);
 router.route("/update_details").post(updateAccountDetails);
-router.route("/update_avatar").post(updateUserAvatar);
-router.route("/update_coverimage").post(updateCoverImage);
+router.route("/update_avatar").post(upload.single("file"), updateUserAvatar);
+router
+  .route("/update_coverimage")
+  .post(upload.single("file"), updateCoverImage);
 
 export default router;
