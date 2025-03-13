@@ -384,10 +384,27 @@ const getWatchHistory = asyncHandler(async (req, res) => {
               ],
             },
           },
+          {
+            $addFields: {
+              owner: {
+                $first: "$owner",
+              },
+            },
+          },
         ],
       },
     },
   ]);
+  console.log(user);
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        user[0].watchHistory,
+        "WatchHistory fetch seccussfully"
+      )
+    );
 });
 
 export {
