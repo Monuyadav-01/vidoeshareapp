@@ -4,7 +4,6 @@ import { User } from "../models/user.model.js";
 import { uploadFileOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
-
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 dotenv.config();
