@@ -47,4 +47,17 @@ const deleteOldCloudinaryImage = asyncHandler(async (publicId) => {
     return null;
   }
 });
-export { uploadFileOnCloudinary };
+const deleteVideoOnCloudinary = asyncHandler(async (publicId) => {
+  try {
+    if (!publicId) {
+      throw new Apierror(400, "Error finding public id");
+    }
+    const response = cloudinary.uploader.destroy(publicId);
+    console.log("Video is deleted", response);
+    return response;
+  } catch (error) {
+    console.log("Error", error.message);
+    return null;
+  }
+});
+export { uploadFileOnCloudinary, deleteVideoOnCloudinary };
