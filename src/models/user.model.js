@@ -46,6 +46,12 @@ const userSchema = new Schema(
       required: [true, "password is required"],
     },
     refressToken: {},
+    userVideos: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Video",
+      },
+    ],
   },
   { timestamps: true }
 );

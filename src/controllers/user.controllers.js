@@ -3,6 +3,7 @@ import { Apierror } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
 import { uploadFileOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { Video } from "../models/video.model.js";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
@@ -409,6 +410,8 @@ const getWatchHistory = asyncHandler(async (req, res) => {
       )
     );
 });
+
+const videoUploadedByUser = asyncHandler(async (req, res) => {});
 
 export {
   registerUser,
