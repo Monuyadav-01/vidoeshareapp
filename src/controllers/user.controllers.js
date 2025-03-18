@@ -411,7 +411,107 @@ const getWatchHistory = asyncHandler(async (req, res) => {
     );
 });
 
-const videoUploadedByUser = asyncHandler(async (req, res) => {});
+const videoUploadedByUser = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  const {
+    page = 1,
+    limit = 10,
+    query,
+    sortBy = "createdAt",
+    sortType = "desc",
+  } = req.query;
+
+  // Validate userId
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    return res.status(400).json({ message: "Invalid user ID" });
+  }
+
+  const pageNumber = parseInt(page, 10);
+  const limitNumber = parseInt(limit, 10);
+  const skip = (pageNumber - 1) * limitNumber;
+
+  const pipeline = [
+    // Match videos by user ID
+    { $match: { owner: new mongoose.Types.ObjectId(userId) } },
+
+    // Search filter
+    ...(query
+      ? [
+          {
+            $match: {
+              $or: [
+                { title: { $regex: query, $options: "i" } },
+                { description: { $regex: query, $options: "i" } },
+              ],
+            },
+          },
+        ]
+      : []),
+
+    // Sorting
+    {
+      $sort: { [sortBy]: sortType === "asc" ? 1 : -1 },
+    },
+
+    // Pagination
+    { $skip: skip },
+    { $limit: limitNumber },
+
+    // Lookup owner details
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "ownerDetails",
+      },
+    },
+
+    // Unwind to extract owner details
+    {
+      $unwind: {
+        path: "$ownerDetails",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+
+    // Project to format output
+    {
+      $project: {
+        _id: 1,
+        title: 1,
+        description: 1,
+        videoFile: 1,
+        thumbnail: 1,
+        createdAt: 1,
+        duration: 1,
+        isPublished: 1,
+        owner: {
+          _id: "$ownerDetails._id",
+          username: "$ownerDetails.username",
+          email: "$ownerDetails.email",
+        },
+      },
+    },
+  ];
+
+  const videos = await Video.aggregate(pipeline);
+
+  // Get total count of videos by the user
+  const totalVideos = await Video.countDocuments({ owner: userId });
+
+  res.status(200).json({
+    success: true,
+    statusCode: 200,
+    data: videos,
+    pagination: {
+      totalItems: totalVideos,
+      currentPage: pageNumber,
+      totalPages: Math.ceil(totalVideos / limitNumber),
+    },
+    message: "Videos uploaded by user fetched successfully",
+  });
+});
 
 export {
   registerUser,

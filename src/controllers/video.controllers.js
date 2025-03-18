@@ -4,14 +4,109 @@ import { User } from "../models/user.model.js";
 import { Apierror } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import {
-  uploadFileOnCloudinary,
-  deleteVideoOnCloudinary,
-} from "../utils/cloudinary.js";
+import { uploadFileOnCloudinary } from "../utils/cloudinary.js";
 
 const getAllVideos = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
-  //TODO: get all videos based on query, sort, pagination
+  const {
+    page = 1,
+    limit = 10,
+    query,
+    sortBy = "createdAt",
+    sortType = "desc",
+    userId,
+  } = req.query;
+
+  // Convert page and limit to integers
+  const pageNumber = parseInt(page, 10);
+  const limitNumber = parseInt(limit, 10);
+  const skip = (pageNumber - 1) * limitNumber;
+
+  // Build the aggregation pipeline
+  const pipeline = [];
+
+  // Filter by user ID if provided
+  if (userId) {
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+    pipeline.push({ $match: { owner: new mongoose.Types.ObjectId(userId) } });
+  }
+
+  // Search query (case-insensitive)
+  if (query) {
+    pipeline.push({
+      $match: {
+        $or: [
+          { title: { $regex: query, $options: "i" } },
+          { description: { $regex: query, $options: "i" } },
+        ],
+      },
+    });
+  }
+
+  // Sorting
+  const sortOptions = {};
+  sortOptions[sortBy] = sortType === "asc" ? 1 : -1;
+  pipeline.push({ $sort: sortOptions });
+
+  // Pagination
+  pipeline.push({ $skip: skip });
+  pipeline.push({ $limit: limitNumber });
+
+  // Lookup user data (optional, if you want to include owner details)
+  pipeline.push({
+    $lookup: {
+      from: "users", // Collection name (lowercase plural of model)
+      localField: "owner",
+      foreignField: "_id",
+      as: "ownerDetails",
+    },
+  });
+
+  // Unwind the ownerDetails array
+  pipeline.push({
+    $unwind: {
+      path: "$ownerDetails",
+      preserveNullAndEmptyArrays: true,
+    },
+  });
+
+  // Project final output (optional)
+  pipeline.push({
+    $project: {
+      _id: 1,
+      title: 1,
+      description: 1,
+      duration: 1,
+      videoFile: 1,
+      thumbnail: 1,
+      createdAt: 1,
+      isPublished: 1,
+      owner: {
+        _id: "$ownerDetails._id",
+        username: "$ownerDetails.username",
+        email: "$ownerDetails.email",
+      },
+    },
+  });
+
+  // Run aggregation
+  const videos = await Video.aggregate(pipeline);
+
+  // Get total count (for pagination)
+  const totalCount = await Video.countDocuments();
+
+  res.status(200).json({
+    success: true,
+    statusCode: 200,
+    data: videos,
+    pagination: {
+      totalItems: totalCount,
+      currentPage: pageNumber,
+      totalPages: Math.ceil(totalCount / limitNumber),
+    },
+    message: "Videos fetched successfully",
+  });
 });
 
 const publishAVideo = async (req, res) => {
